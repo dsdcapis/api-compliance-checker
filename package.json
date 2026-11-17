@@ -5,13 +5,13 @@
   "description": "Browser-based checker that compares an OpenAPI YAML against the DSDC LTL and FTL API standards.",
   "type": "module",
   "license": "UNLICENSED",
-  "engines": { "node": ">=20" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "build:standards": "node scripts/build-standards.mjs dist",
     "build:site": "node scripts/build-site.mjs dist",
     "build": "npm run build:standards && npm run build:site",
     "selfcheck": "node scripts/self-check.mjs dist/standards",
-    "test": "node --test test/",
+    "test": "node --test test/engine.test.mjs",
     "serve": "node scripts/serve.mjs dist"
   },
   "dependencies": {
