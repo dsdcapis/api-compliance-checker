@@ -1,0 +1,8 @@
+{
+  "$comment": "Public DSDC repositories whose OpenAPI files are published as selectable standards. Only public repos belong here — the built site is public.",
+  "sources": [
+    { "family": "LTL", "label": "Less-Than-Truckload", "repo": "dsdcapis/less-than-truckload", "branch": "main", "dir": "api-specs" },
+    { "family": "FTL", "label": "Full Truckload", "repo": "dsdcapis/full-truckload", "branch": "main", "dir": "api-specs" }
+  ],
+  "exclude": ["/external-specs/", "/schemas/"]
+}

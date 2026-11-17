@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!--CSP-->
+  <meta name="referrer" content="no-referrer">
+  <title>DSDC API Compliance Checker</title>
+  <meta name="description" content="Check an OpenAPI YAML against the DSDC LTL and FTL API standards.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="assets/app.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="wrap">
+      <p class="eyebrow">Digital Standards Development Council</p>
+      <h1>API Compliance Checker</h1>
+      <p class="lede">Compare your OpenAPI definition with a DSDC Less-Than-Truckload or Full Truckload standard. It checks paths, fields, field requirements, terminology, HTTP usage, security and error handling.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <noscript><p class="callout callout-bad">This checker runs in your browser and needs JavaScript enabled.</p></noscript>
+
+    <aside class="callout privacy" aria-label="How your data is handled">
+      <strong>Your YAML is checked in your browser.</strong>
+      Nothing is uploaded while you work. When you run the check, the results are sent to the DSDC team. Your YAML goes with them only if you choose, and credentials and payment-card numbers are removed first.
+      <span class="muted">Please do not include payment card data in your specification.</span>
+    </aside>
+
+    <form id="checker" novalidate>
+      <!-- 1. Standard -->
+      <section class="step" aria-labelledby="s1">
+        <h2 id="s1"><span class="num">1</span> Choose a standard</h2>
+        <fieldset class="segmented" id="family-picker">
+          <legend class="sr-only">Mode</legend>
+          <label><input type="radio" name="family" value="LTL" checked><span>Less-Than-Truckload (LTL)</span></label>
+          <label><input type="radio" name="family" value="FTL"><span>Full Truckload (FTL)</span></label>
+        </fieldset>
+        <div class="grid2">
+          <label class="field">API
+            <select id="api" required></select>
+          </label>
+          <label class="field">Version
+            <select id="version" required></select>
+          </label>
+        </div>
+        <p class="hint" id="standard-meta"></p>
+        <p class="hint" id="detect-row" hidden>
+          <button type="button" class="link" id="detect">Not sure? Detect the closest standard from my YAML</button>
+          <span id="detect-result" role="status"></span>
+        </p>
+      </section>
+
+      <!-- 2. YAML -->
+      <section class="step" aria-labelledby="s2">
+        <h2 id="s2"><span class="num">2</span> Provide your OpenAPI YAML</h2>
+        <div class="drop" id="drop">
+          <input type="file" id="file" accept=".yaml,.yml,.json,application/yaml,application/json,text/yaml" class="sr-only">
+          <label for="file" class="btn btn-secondary">Choose file</label>
+          <span>or drop a .yaml / .yml / .json file here, or paste below</span>
+        </div>
+        <label class="field">
+          <span class="sr-only">OpenAPI YAML</span>
+          <textarea id="yaml" spellcheck="false" autocomplete="off" autocapitalize="off" rows="14" placeholder="openapi: 3.0.3&#10;info:&#10;  title: My Carrier eBOL API&#10;  version: 1.0.0&#10;paths:&#10;  ..."></textarea>
+        </label>
+        <p class="hint" id="parse-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <!-- 3. Submitter -->
+      <section class="step" aria-labelledby="s3">
+        <h2 id="s3"><span class="num">3</span> About you</h2>
+        <div class="grid3">
+          <label class="field">Name<input id="name" autocomplete="name" required maxlength="120"></label>
+          <label class="field">Company<input id="company" autocomplete="organization" required maxlength="160"></label>
+          <label class="field">Work email<input id="email" type="email" autocomplete="email" required maxlength="200"></label>
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="include-yaml" checked> Share my YAML with the DSDC team (secrets and card numbers are redacted)</label>
+          <label><input type="checkbox" id="mask-servers" checked> Hide my server hostnames in the shared copy</label>
+        </div>
+        <!-- Honeypot: humans never see or fill this. -->
+        <label class="hp" aria-hidden="true">Leave empty<input id="website" tabindex="-1" autocomplete="off"></label>
+        <p class="hint" id="notify-note"></p>
+      </section>
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary" id="run">Run compliance check</button>
+        <span id="run-status" role="status" aria-live="polite"></span>
+      </div>
+    </form>
+
+    <!-- Results -->
+    <section id="results" class="results" hidden aria-labelledby="results-title" tabindex="-1">
+      <div class="verdict" id="verdict">
+        <div>
+          <p class="eyebrow" id="verdict-standard"></p>
+          <h2 id="results-title"></h2>
+          <p id="verdict-text"></p>
+        </div>
+        <div class="tiles">
+          <div class="tile tile-breaking"><span id="n-breaking">0</span><small>Breaking</small></div>
+          <div class="tile tile-warning"><span id="n-warning">0</span><small>Warnings</small></div>
+          <div class="tile tile-info"><span id="n-info">0</span><small>Additional / info</small></div>
+        </div>
+      </div>
+      <p class="coverage" id="coverage"></p>
+      <p class="callout" id="send-status" role="status" aria-live="polite" hidden></p>
+
+      <div class="category-summary" id="category-summary"></div>
+
+      <div class="toolbar">
+        <fieldset class="chips" id="sev-filter">
+          <legend class="sr-only">Severity</legend>
+          <label><input type="checkbox" value="breaking" checked><span>Breaking</span></label>
+          <label><input type="checkbox" value="warning" checked><span>Warnings</span></label>
+          <label><input type="checkbox" value="info" checked><span>Info</span></label>
+        </fieldset>
+        <select id="cat-filter" aria-label="Category"><option value="">All areas</option></select>
+        <input id="search" type="search" placeholder="Filter findings…" aria-label="Filter findings">
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-secondary" id="dl-md">Download report (.md)</button>
+        <button type="button" class="btn btn-secondary" id="dl-json">Download JSON</button>
+      </div>
+
+      <p class="muted" id="shown-count"></p>
+      <ol class="findings" id="findings"></ol>
+
+      <details class="sent-preview" id="sent-preview" hidden>
+        <summary>What was sent to DSDC</summary>
+        <pre id="sent-body"></pre>
+      </details>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <p>Standards are loaded from the public <a href="https://github.com/dsdcapis/less-than-truckload">less-than-truckload</a> and <a href="https://github.com/dsdcapis/full-truckload">full-truckload</a> repositories. <span id="standards-date"></span></p>
+    <p>A passing result means your definition matches the standard as written. It does not certify the running API. <a href="https://github.com/dsdcapis/api-compliance-checker">Source and rules</a>.</p>
+  </footer>
+</body>
+</html>

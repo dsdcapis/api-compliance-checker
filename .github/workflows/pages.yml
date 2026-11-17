@@ -1,0 +1,66 @@
+name: Build and deploy checker
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 6 * * 1' # weekly: pick up newly published standards
+  workflow_dispatch:
+  repository_dispatch:
+    types: [standards-updated] # standards repos can trigger an immediate refresh
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Fetch and bundle published standards
+        run: npm run build:standards
+
+      - name: Self-check (each standard must match itself)
+        run: npm run selfcheck
+
+      - name: Build site
+        run: npm run build:site
+        env:
+          NOTIFY_PROVIDER: ${{ vars.NOTIFY_PROVIDER }}
+          NOTIFY_ENDPOINT: ${{ vars.NOTIFY_ENDPOINT }}
+          NOTIFY_ACCESS_KEY: ${{ vars.NOTIFY_ACCESS_KEY }}
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

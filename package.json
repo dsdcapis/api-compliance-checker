@@ -1,0 +1,24 @@
+{
+  "name": "api-compliance-checker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser-based checker that compares an OpenAPI YAML against the DSDC LTL and FTL API standards.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build:standards": "node scripts/build-standards.mjs dist",
+    "build:site": "node scripts/build-site.mjs dist",
+    "build": "npm run build:standards && npm run build:site",
+    "selfcheck": "node scripts/self-check.mjs dist/standards",
+    "test": "node --test test/",
+    "serve": "node scripts/serve.mjs dist"
+  },
+  "dependencies": {
+    "yaml": "2.8.1"
+  },
+  "devDependencies": {
+    "@apidevtools/json-schema-ref-parser": "11.9.3",
+    "esbuild": "0.25.10"
+  }
+}
